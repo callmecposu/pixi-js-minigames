@@ -158,7 +158,7 @@ const showFeedbackMessage = (text, color) => {
 
 const updateAreaContainer = ({areaContainer, area, keyText}) => {
     const newWidth = area.width - 25
-    const widthStep = Math.floor(newWidth - area.width)
+    const widthStep = Math.floor(newWidth - area.width) / 60
     let newX
     let xStep = 0
     while (xStep == 0) {
