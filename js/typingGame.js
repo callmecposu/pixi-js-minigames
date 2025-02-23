@@ -98,7 +98,7 @@ const createStatisticsDisplay = () => {
 
 const spawnWords = async () => {
     while (true) {
-        const randomWordIndex = Math.floor(Math.random() * WORD_POOL.length);
+        const randomWordIndex = Math.floor(Math.random() * WORD_POOL.length - 1);
         const randomWord = WORD_POOL[randomWordIndex];
         const word = new PIXI.Text({ text: randomWord });
         word.y = -20;
