@@ -4,9 +4,9 @@ let incorrectAttempts = 0;
 let score = 0;
 let missedWords = 0;
 
-let wordMoveSpeed = 0.5
+let wordMoveSpeed = 0.5;
 
-let WORD_POOL
+let WORD_POOL;
 
 let words = [];
 
@@ -17,8 +17,13 @@ let words = [];
     document.body.appendChild(app.canvas);
 
     // load the word pool
-    const res = await fetch('../data/words.json')
-    WORD_POOL = (await res.json()).words
+    let dataURL =
+        window.location.origin +
+        "/" +
+        window.location.pathname.split("/").splice(-2, 1).join("/") +
+        "/data/words.json";
+    const res = await fetch(dataURL);
+    WORD_POOL = (await res.json()).words;
 
     // create statistics display
     const { scoreDisplay, missedWordsDisplay, incorrectAttemptsDisplay } =
@@ -35,12 +40,12 @@ let words = [];
     app.stage.addChild(missedWordsDisplay);
 
     const statisticsTicker = () => {
-        scoreDisplay.text = `Score: ${score}`
-        missedWordsDisplay.text = `Missed Words: ${missedWords}`
-        incorrectAttemptsDisplay.text = `Incorrect Attempts: ${incorrectAttempts}`
-    }
+        scoreDisplay.text = `Score: ${score}`;
+        missedWordsDisplay.text = `Missed Words: ${missedWords}`;
+        incorrectAttemptsDisplay.text = `Incorrect Attempts: ${incorrectAttempts}`;
+    };
 
-    app.ticker.add(statisticsTicker)
+    app.ticker.add(statisticsTicker);
 
     // create a typer
     const typer = createTyper();
@@ -97,14 +102,16 @@ const spawnWords = async () => {
         const randomWord = WORD_POOL[randomWordIndex];
         const word = new PIXI.Text({ text: randomWord });
         word.y = -20;
-        word.x = Math.floor(Math.random() * (app.screen.width - word.width - 20));
+        word.x = Math.floor(
+            Math.random() * (app.screen.width - word.width - 20)
+        );
         app.stage.addChild(word);
 
         const wordTicker = () => {
             word.y += wordMoveSpeed;
             if (word.y >= app.screen.height - 150) {
-                missedWords += 1
-                wordMoveSpeed -= 0.05
+                missedWords += 1;
+                wordMoveSpeed -= 0.05;
                 words.splice(
                     words.findIndex((x) => x.word.text == randomWord),
                     1
@@ -124,8 +131,8 @@ const handleWordEnter = ({ entered }) => {
     words.forEach((w) => console.log(w.word.text));
     const found = words.find((x) => x.word.text == entered);
     if (found) {
-        score += 1
-        wordMoveSpeed += 0.05
+        score += 1;
+        wordMoveSpeed += 0.05;
         app.ticker.remove(found.wordTicker);
         words.splice(
             words.findIndex((x) => x.word.text == found.word.text),
@@ -140,7 +147,6 @@ const handleWordEnter = ({ entered }) => {
         };
         app.ticker.add(removeWordTicker);
     } else {
-        incorrectAttempts += 1
-
+        incorrectAttempts += 1;
     }
 };
