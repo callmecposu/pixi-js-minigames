@@ -11,6 +11,10 @@ let characterCameraBounds = { tl: { x: 0, y: 0 }, br: { x: 0, y: 0 } };
 const characterSpriteXPadding = 16;
 const characterSpriteYPadding = 8;
 
+let interactiveObjects = [];
+
+let isDialogActive = false;
+
 (async () => {
     // init PIXI
     await app.init({ background: 0xffffff, resizeTo: window });
@@ -44,8 +48,15 @@ const characterSpriteYPadding = 8;
         d: ss.animations.walkEast,
     };
 
+    // create character animated sprite
+    const anim = new PIXI.AnimatedSprite(ss.animations.idle);
+
+    anim.animationSpeed = 0.05;
+
+    anim.play();
+
     // load level assets
-    const levelAssetsAliases = ["wood_tile", "stone_tile"];
+    const levelAssetsAliases = ["wood_tile", "stone_tile", "chest_tile"];
 
     PIXI.Assets.add([
         {
@@ -59,6 +70,10 @@ const characterSpriteYPadding = 8;
                 baseURL +
                 "/images/seamless-64px-rpg-tiles-1.1.0/stone tile.png",
         },
+        {
+            alias: "chest_tile",
+            src: baseURL + "images/icons_20211222/png/64x64/case_metal_02.png",
+        },
     ]);
 
     const levelAssets = await Promise.all(
@@ -69,23 +84,51 @@ const characterSpriteYPadding = 8;
     const levelContainer = new PIXI.Container();
     for (let i = 0; i < levelLayout.length; i++) {
         for (let y = 0; y < levelLayout[i].length; y++) {
-            const tile = new PIXI.Sprite(levelAssets[levelLayout[i][y]]);
-            tile.x = y * 64;
-            tile.y = i * 64;
-            levelContainer.addChild(tile);
+            // fill the first layer (floor & walls)
+            if (levelLayout[i][y] < 2) {
+                const tile = new PIXI.Sprite(levelAssets[levelLayout[i][y]]);
+                tile.x = y * 64;
+                tile.y = i * 64;
+                levelContainer.addChild(tile);
+            } else {
+                // if encountered special object,
+                // store its position to later add it on top of a floor tile
+                interactiveObjects.push({
+                    levelLayoutPos: {
+                        levelLayoutX: y,
+                        levelLayoutY: i,
+                    },
+                    tileID: levelLayout[i][y],
+                });
+                // place a floor tile in its place during this stage
+                const tile = new PIXI.Sprite(levelAssets[0]);
+                tile.x = y * 64;
+                tile.y = i * 64;
+                levelContainer.addChild(tile);
+            }
         }
     }
+    // add special objects' sprites on top of floor tiles
+    interactiveObjects.forEach((obj) => {
+        const intObjSprite = new PIXI.Sprite(levelAssets[obj.tileID]);
+        intObjSprite.x = obj.levelLayoutPos.levelLayoutX * 64;
+        intObjSprite.y = obj.levelLayoutPos.levelLayoutY * 64;
+        obj.sprite = intObjSprite;
+        levelContainer.addChild(intObjSprite);
+        // add respective showDialog function to the object
+        if (obj.tileID == 2) {
+            obj.showDialog = () => {
+                showChestDialog(obj, anim, levelContainer);
+            };
+        }
+    });
+
+    // mount level container
     levelContainer.x = app.screen.width / 2 - levelContainer.width / 2;
     levelContainer.y = app.screen.height / 2 - levelContainer.height / 2;
     app.stage.addChild(levelContainer);
 
-    // create character animated sprite
-    const anim = new PIXI.AnimatedSprite(ss.animations.idle);
-
-    anim.animationSpeed = 0.05;
-
-    anim.play();
-
+    // mount character sprite
     anim.x = app.screen.width / 2 - anim.width / 2;
     anim.y = app.screen.height / 2 - anim.height / 2;
     app.stage.addChild(anim);
@@ -207,6 +250,25 @@ const characterSpriteYPadding = 8;
             }
         }
     });
+
+    // add ticker to display / hide interactive object dialog
+    app.ticker.add(() => {
+        // get current levelLayout coordinates
+        const curLevelLayoutPos = getLevelLayoutCoordinates({
+            x: anim.x,
+            y: anim.y,
+            levelContainer,
+        });
+        // check if player is in vicinity of an interactive object
+        const intObj = interactiveObjects.find((obj) =>
+            [curLevelLayoutPos[0], curLevelLayoutPos[3]].every((coord) =>
+                isInVicinity({ obj1: coord, obj2: obj.levelLayoutPos })
+            )
+        );
+        if (intObj && !isDialogActive) {
+            intObj.showDialog();
+        }
+    });
 })();
 
 const getLevelLayoutCoordinates = ({ x, y, levelContainer }) => {
@@ -249,7 +311,7 @@ const getLevelLayoutCoordinates = ({ x, y, levelContainer }) => {
 
 const canGoTo = (spriteCorners) => {
     return spriteCorners.every(
-        (x) => levelLayout[x.levelLayoutY][x.levelLayoutX] != 1
+        (x) => levelLayout[x.levelLayoutY][x.levelLayoutX] == 0
     );
 };
 
@@ -295,4 +357,65 @@ const moveCharacter = ({ toX, toY, character, levelContainer }) => {
         levelContainer.x -= toX - character.x;
         levelContainer.y -= toY - character.y;
     }
+};
+
+const isInVicinity = ({ obj1, obj2 }) => {
+    const xAxisDiff = Math.abs(obj1.levelLayoutX - obj2.levelLayoutX);
+    const yAxisDiff = Math.abs(obj1.levelLayoutY - obj2.levelLayoutY);
+    return xAxisDiff + yAxisDiff == 1;
+};
+
+const showChestDialog = (chest, character, levelContainer) => {
+    isDialogActive = true;
+    // create dialog
+    const dialogContainer = new PIXI.Container();
+    const dialogText = new PIXI.Text({
+        text: "You've found a chest!",
+        style: {
+            fill: 0xffffff,
+            fontSize: 24,
+            fontFamily: "Courier New",
+        },
+    });
+    const dialogBg = new PIXI.Graphics();
+    dialogBg.rect(0, 0, dialogText.width + 50, 150);
+    dialogBg.fill(0x000000);
+    dialogContainer.addChild(dialogBg);
+    dialogContainer.addChild(dialogText);
+    dialogText.x = dialogContainer.width / 2 - dialogText.width / 2;
+    dialogText.y = dialogContainer.height / 2 - dialogText.height / 2;
+    dialogContainer.x = app.screen.width / 2 - dialogContainer.width / 2;
+    dialogContainer.y = app.screen.height;
+    app.stage.addChild(dialogContainer);
+    // add ticker to remove dialog once player is not in vicinity
+    const dialogTicker = () => {
+        const curCharacterLevelLayoutPos = getLevelLayoutCoordinates({
+            x: character.x,
+            y: character.y,
+            levelContainer,
+        });
+        const characterInVicinity = [
+            curCharacterLevelLayoutPos[0],
+            curCharacterLevelLayoutPos[3],
+        ].every((coord) =>
+            isInVicinity({ obj1: coord, obj2: chest.levelLayoutPos })
+        );
+        if (characterInVicinity) {
+            if (
+                dialogContainer.y >
+                app.screen.height / 2 - dialogContainer.height / 2
+            ) {
+                dialogContainer.y -= 10;
+            }
+        } else {
+            if (dialogContainer.y < app.screen.height) {
+                dialogContainer.y += 10;
+            } else {
+                isDialogActive = false;
+                app.stage.removeChild(dialogContainer);
+                app.ticker.remove(dialogTicker);
+            }
+        }
+    };
+    app.ticker.add(dialogTicker);
 };

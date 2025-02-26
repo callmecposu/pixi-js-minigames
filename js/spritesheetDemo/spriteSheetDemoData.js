@@ -57,27 +57,8 @@ for (let i = 1; i < 9; i++) {
     ssData.animations.walkSouth.push(`walkSouth${i}`);
 }
 
-// let levelLayout = []
-
-// generate level layout
-
-// // generate level area
-// for (let i = 0; i < 100; i ++){
-//     levelLayout.push([])
-//     for (let y = 0; y < 100; y++){
-//         if (i == 0 || i == 99){
-//             levelLayout[i].push(1)
-//         } else {
-//             if (y == 0 || y == 99){
-//                 levelLayout[i].push(1)
-//             } else {
-//                 levelLayout[i].push(0)
-//             }
-//         }
-//     }
-// }
-
 // generate level layout using Randomized Walk algorithm
+
 const levelWidth = 50;
 const levelHeight = 50;
 
@@ -86,35 +67,49 @@ let levelLayout = Array.from({ length: levelHeight }, () =>
 );
 
 // carve floor in the center so that player can certainly be placed there
-const centerX = Math.floor(levelWidth / 2) - 1
-const centerY = Math.floor(levelHeight / 2) - 1
-for (let i = centerY - 1; i <= centerY + 1; i++ ){
-    for (let y = centerX - 1; y <= centerX +1; y++){
-        levelLayout[y][i] = 0
+const centerX = Math.floor(levelWidth / 2) - 1;
+const centerY = Math.floor(levelHeight / 2) - 1;
+for (let i = centerY - 1; i <= centerY + 1; i++) {
+    for (let y = centerX - 1; y <= centerX + 1; y++) {
+        levelLayout[y][i] = 0;
     }
 }
 
-const carveCorridors = (steps = levelHeight*levelWidth / 2) => {
-    let x = Math.floor(levelWidth / 2)
-    let y = Math.floor(levelHeight / 2)
+const carveCorridors = (steps = (levelHeight * levelWidth) / 2) => {
+    let x = Math.floor(levelWidth / 2);
+    let y = Math.floor(levelHeight / 2);
 
-    for (let i = 0; i < steps; i++){
+    for (let i = 0; i < steps; i++) {
         // carve floor
-        levelLayout[y][x] = 0 
+        levelLayout[y][x] = 0;
 
         // randomly choose a direction
         const directions = [
-            {dx: 1, dy: 0},
-            {dx: -1, dy: 0},
-            {dx: 0, dy: 1},
-            {dx: 0, dy: -1},
-        ]
-        const {dx, dy} = directions[Math.floor(Math.random() * directions.length)]
+            { dx: 1, dy: 0 },
+            { dx: -1, dy: 0 },
+            { dx: 0, dy: 1 },
+            { dx: 0, dy: -1 },
+        ];
+        const { dx, dy } =
+            directions[Math.floor(Math.random() * directions.length)];
 
         // move ensuring we stay within bounds
         x = Math.max(1, Math.min(levelWidth - 2, x + dx));
         y = Math.max(1, Math.min(levelHeight - 2, y + dy));
     }
-}
+};
 
-carveCorridors()
+carveCorridors();
+
+// add chests to the level
+
+const chestsNum = 5
+
+for (let i = 0; i < chestsNum; i++){
+    let x, y
+    do {
+        x =  1 + Math.floor(Math.random() * (levelWidth - 3))
+        y =  1 + Math.floor(Math.random() * (levelHeight - 3))
+    }while (levelLayout[y][x] != 0);
+    levelLayout[y][x] = 2
+}
