@@ -56,3 +56,21 @@ for (let i = 1; i < 9; i++) {
     ssData.frames[`walkSouth${i}`] = generateFrameData(64*i, 10*64)
     ssData.animations.walkSouth.push(`walkSouth${i}`)
 }
+
+let levelLayout = []
+
+// generate level layout
+for (let i = 0; i < 10; i ++){
+    levelLayout.push([])
+    for (let y = 0; y < 10; y++){
+        if (i == 0 || i == 9){
+            levelLayout[i].push(1)
+        } else {
+            if (y == 0 || y == 9){
+                levelLayout[i].push(1)
+            } else {
+                levelLayout[i].push(0)
+            }
+        }
+    }
+}
