@@ -6,18 +6,10 @@ const movementKeys = ["w", "a", "s", "d"];
 
 const characterSpeed = 1;
 
-/*
----------------------------------
+let characterCameraBounds = { tl: { x: 0, y: 0 }, br: { x: 0, y: 0 } };
 
-
-
-                P
-
-
-
----------------------------------
-*/
-let characterCameraBounds = { tr: { x: 0, y: 0 }, bl: { x: 0, y: 0 } };
+const characterSpriteXPadding = 16;
+const characterSpriteYPadding = 8;
 
 (async () => {
     // init PIXI
@@ -99,10 +91,10 @@ let characterCameraBounds = { tr: { x: 0, y: 0 }, bl: { x: 0, y: 0 } };
     app.stage.addChild(anim);
 
     // create character camera bounds
-    characterCameraBounds.tr.x = app.screen.width / 4;
-    characterCameraBounds.tr.y = app.screen.height / 4;
-    characterCameraBounds.bl.x = (app.screen.width * 3) / 4;
-    characterCameraBounds.bl.y = (app.screen.height * 3) / 4;
+    characterCameraBounds.tl.x = app.screen.width / 4;
+    characterCameraBounds.tl.y = app.screen.height / 4;
+    characterCameraBounds.br.x = (app.screen.width * 3) / 4;
+    characterCameraBounds.br.y = (app.screen.height * 3) / 4;
 
     // add event listeners
     document.addEventListener("keydown", (e) => {
@@ -174,21 +166,44 @@ let characterCameraBounds = { tr: { x: 0, y: 0 }, bl: { x: 0, y: 0 } };
                 getLevelLayoutCoordinates({ x: newX, y: newY, levelContainer })
             )
         ) {
-            // if character is within camera bounds,
-            // move the character sprite
-            if (
-                isWithinBounds({
+            moveCharacter({
+                toX: newX,
+                toY: newY,
+                character: anim,
+                levelContainer,
+            });
+        } else {
+            // if can't go there and both coordinates are updated,
+            // see if we can move one coordinate only
+            const canMoveInXAxis = canGoTo(
+                getLevelLayoutCoordinates({
                     x: newX,
-                    y: newY,
-                    bounds: characterCameraBounds,
+                    y: anim.y,
+                    levelContainer,
                 })
-            ) {
-                anim.x = newX;
-                anim.y = newY;
-            } else {
-                // else, move the level container
-                levelContainer.x -= newX - anim.x;
-                levelContainer.y -= newY - anim.y;
+            );
+            const canMoveInYAxis = canGoTo(
+                getLevelLayoutCoordinates({
+                    x: anim.x,
+                    y: newY,
+                    levelContainer,
+                })
+            );
+            if (canMoveInXAxis) {
+                moveCharacter({
+                    toX: newX,
+                    toY: anim.y,
+                    character: anim,
+                    levelContainer,
+                });
+            }
+            if (canMoveInYAxis) {
+                moveCharacter({
+                    toX: anim.x,
+                    toY: newY,
+                    character: anim,
+                    levelContainer,
+                });
             }
         }
     });
@@ -198,23 +213,43 @@ const getLevelLayoutCoordinates = ({ x, y, levelContainer }) => {
     // get coordinates relative to the level container
     const relX = x - levelContainer.x;
     const relY = y - levelContainer.y;
-    // divide coordinates by tile size (64)
-    return {
-        tr: {
-            levelLayoutX: Math.floor(relX / 64),
-            levelLayoutY: Math.floor(relY / 64),
+
+    // return the sprite corner coordinates in level layout system
+    return [
+        // top left corner
+        {
+            levelLayoutX: Math.floor((relX + characterSpriteXPadding) / 64),
+            levelLayoutY: Math.floor((relY + characterSpriteYPadding) / 64),
         },
-        bl: {
-            levelLayoutX: Math.floor((relX + 64) / 64),
-            levelLayoutY: Math.floor((relY + 64) / 64),
+        // top right corner
+        {
+            levelLayoutX: Math.floor(
+                (relX + 64 - characterSpriteXPadding) / 64
+            ),
+            levelLayoutY: Math.floor((relY + characterSpriteYPadding) / 64),
         },
-    };
+        // bottom left corner
+        {
+            levelLayoutX: Math.floor((relX + characterSpriteXPadding) / 64),
+            levelLayoutY: Math.floor(
+                (relY + 64 - characterSpriteYPadding) / 64
+            ),
+        },
+        // bottom right corner
+        {
+            levelLayoutX: Math.floor(
+                (relX + 64 - characterSpriteXPadding) / 64
+            ),
+            levelLayoutY: Math.floor(
+                (relY + 64 - characterSpriteYPadding) / 64
+            ),
+        },
+    ];
 };
 
-const canGoTo = ({ tr, bl }) => {
-    return (
-        levelLayout[tr.levelLayoutY][tr.levelLayoutX] != 1 &&
-        levelLayout[bl.levelLayoutY][bl.levelLayoutX] != 1
+const canGoTo = (spriteCorners) => {
+    return spriteCorners.every(
+        (x) => levelLayout[x.levelLayoutY][x.levelLayoutX] != 1
     );
 };
 
@@ -238,9 +273,26 @@ const getCoordinatesAfterMove = ({ curX, curY }) => {
 
 const isWithinBounds = ({ x, y, bounds }) => {
     return (
-        x >= bounds.tr.x &&
-        x <= bounds.bl.x &&
-        y >= bounds.tr.y &&
-        y <= bounds.bl.y
+        x >= bounds.tl.x &&
+        x <= bounds.br.x &&
+        y >= bounds.tl.y &&
+        y <= bounds.br.y
     );
+};
+
+const moveCharacter = ({ toX, toY, character, levelContainer }) => {
+    if (
+        isWithinBounds({
+            x: toX,
+            y: toY,
+            bounds: characterCameraBounds,
+        })
+    ) {
+        character.x = toX;
+        character.y = toY;
+    } else {
+        // else, move the level container
+        levelContainer.x -= toX - character.x;
+        levelContainer.y -= toY - character.y;
+    }
 };
