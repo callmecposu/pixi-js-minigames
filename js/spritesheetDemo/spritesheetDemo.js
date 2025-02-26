@@ -72,7 +72,7 @@ let isDialogActive = false;
         },
         {
             alias: "chest_tile",
-            src: baseURL + "images/icons_20211222/png/64x64/case_metal_02.png",
+            src: baseURL + "/images/icons_20211222/png/64x64/case_metal_02.png",
         },
     ]);
 
