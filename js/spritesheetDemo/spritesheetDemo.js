@@ -17,6 +17,25 @@ let isDialogActive = false;
 
 let chestsOpened = 0;
 
+const floorWallTileCombinations = [
+    {
+        floor: '/images/seamless-64px-rpg-tiles-1.1.0/wood tile.png',
+        wall: '/images/seamless-64px-rpg-tiles-1.1.0/stone tile.png'
+    },
+    {
+        floor: '/images/seamless-64px-rpg-tiles-1.1.0/coldCaveGravel.png',
+        wall: '/images/seamless-64px-rpg-tiles-1.1.0/basalt.png'
+    },
+    {
+        floor: '/images/seamless-64px-rpg-tiles-1.1.0/grass dry.png',
+        wall: '/images/seamless-64px-rpg-tiles-1.1.0/highland.png'
+    },
+    {
+        floor: '/images/seamless-64px-rpg-tiles-1.1.0/path2 snowy.png',
+        wall: '/images/seamless-64px-rpg-tiles-1.1.0/pebbles snow.png'
+    },
+];
+
 (async () => {
     // init PIXI
     await app.init({ background: 0xffffff, resizeTo: window });
@@ -59,23 +78,24 @@ let chestsOpened = 0;
 
     // load level assets
     const levelAssetsAliases = [
-        "wood_tile",
-        "stone_tile",
+        "floor_tile",
+        "wall_tile",
         "chest_tile",
         "exit_tile",
     ];
 
+    const floorWallTiles = floorWallTileCombinations[Math.floor(Math.random() * floorWallTileCombinations.length)]
+
     PIXI.Assets.add([
         {
-            alias: "wood_tile",
+            alias: "floor_tile",
             src:
-                baseURL + "/images/seamless-64px-rpg-tiles-1.1.0/wood tile.png",
+                baseURL + floorWallTiles.floor,
         },
         {
-            alias: "stone_tile",
+            alias: "wall_tile",
             src:
-                baseURL +
-                "/images/seamless-64px-rpg-tiles-1.1.0/stone tile.png",
+                baseURL + floorWallTiles.wall
         },
         {
             alias: "chest_tile",
