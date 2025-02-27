@@ -58,7 +58,12 @@ let chestsOpened = 0;
     anim.play();
 
     // load level assets
-    const levelAssetsAliases = ["wood_tile", "stone_tile", "chest_tile"];
+    const levelAssetsAliases = [
+        "wood_tile",
+        "stone_tile",
+        "chest_tile",
+        "exit_tile",
+    ];
 
     PIXI.Assets.add([
         {
@@ -75,6 +80,12 @@ let chestsOpened = 0;
         {
             alias: "chest_tile",
             src: baseURL + "/images/icons_20211222/png/64x64/case_metal_02.png",
+        },
+        {
+            alias: "exit_tile",
+            src:
+                baseURL +
+                "/images/icons_20211222/png/64x64/ornament_violet.png",
         },
     ]);
 
@@ -138,8 +149,8 @@ let chestsOpened = 0;
             fill: 0xffffff,
             fontFamily: "Courier New",
             fontSize: 18,
-            stroke: 'black',
-            strokeThickness: 4
+            stroke: "black",
+            strokeThickness: 4,
         },
     });
     chestStatisticsContainer.addChild(chestStatisticsIcon);
@@ -310,10 +321,52 @@ let chestsOpened = 0;
     });
 
     // add ticker to update UI elements
-    app.ticker.add(() => {
+    const updateUIStatisticsTicker = () => {
         // update chestStatistics
         chestStatisticsText.text = `${chestsOpened} / ${chestsNum}`;
-    });
+        // if all objectives are completed, add an exit tile to the level
+        if (chestsOpened == chestsNum) {
+            // get curent player coordinates
+            const curCharacterLevelLayoutPos = getLevelLayoutCoordinates({
+                x: anim.x,
+                y: anim.y,
+                levelContainer,
+            });
+            // generate coordinates for an exit tile
+            let exitX, exitY;
+            do {
+                exitX = Math.floor(Math.random() * (levelWidth - 3));
+                exitY = Math.floor(Math.random() * (levelHeight - 3));
+            } while (
+                levelLayout[exitY][exitX] != 0 ||
+                curCharacterLevelLayoutPos.some(
+                    (x) => x.levelLayoutX == exitX && x.levelLayoutY == exitY
+                )
+            );
+            // create exit tile sprite
+            const exitTileSprite = new PIXI.Sprite(levelAssets[3]);
+            exitTileSprite.x = exitX * 64;
+            exitTileSprite.y = exitY * 64;
+            levelContainer.addChild(exitTileSprite);
+            // add exit tile to the level
+            levelLayout[exitY][exitX] = 3;
+            let exitIntObj = {
+                levelLayoutPos: {
+                    levelLayoutX: exitX,
+                    levelLayoutY: exitY,
+                },
+                tileID: 3,
+                dialogCooldown: 0,
+                sprite: exitTileSprite,
+                showDialog: () => {
+                    showExitDialog(exitIntObj, anim, levelContainer);
+                },
+            };
+            interactiveObjects.push(exitIntObj);
+            app.ticker.remove(updateUIStatisticsTicker);
+        }
+    };
+    app.ticker.add(updateUIStatisticsTicker);
 })();
 
 const getLevelLayoutCoordinates = ({ x, y, levelContainer }) => {
@@ -429,6 +482,25 @@ const showChestDialog = (chest, character, levelContainer) => {
         },
         noOptionHandler: () => {},
         intObj: chest,
+        character,
+        levelContainer,
+    });
+
+    app.stage.addChild(dialogContainer);
+    app.ticker.add(dialogTicker);
+};
+
+const showExitDialog = (exit, character, levelContainer) => {
+    isDialogActive = true;
+
+    const { dialogContainer, dialogTicker } = createDialog({
+        text: "You've found the exit...",
+        prompt: "Are you ready to leave?",
+        yesOptionHander: () => {
+            location.reload();
+        },
+        noOptionHandler: () => {},
+        intObj: exit,
         character,
         levelContainer,
     });
