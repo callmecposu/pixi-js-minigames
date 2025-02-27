@@ -19,20 +19,20 @@ let chestsOpened = 0;
 
 const floorWallTileCombinations = [
     {
-        floor: '/images/seamless-64px-rpg-tiles-1.1.0/wood tile.png',
-        wall: '/images/seamless-64px-rpg-tiles-1.1.0/stone tile.png'
+        floor: "/images/seamless-64px-rpg-tiles-1.1.0/wood tile.png",
+        wall: "/images/seamless-64px-rpg-tiles-1.1.0/stone tile.png",
     },
     {
-        floor: '/images/seamless-64px-rpg-tiles-1.1.0/coldCaveGravel.png',
-        wall: '/images/seamless-64px-rpg-tiles-1.1.0/basalt.png'
+        floor: "/images/seamless-64px-rpg-tiles-1.1.0/coldCaveGravel.png",
+        wall: "/images/seamless-64px-rpg-tiles-1.1.0/basalt.png",
     },
     {
-        floor: '/images/seamless-64px-rpg-tiles-1.1.0/grass dry.png',
-        wall: '/images/seamless-64px-rpg-tiles-1.1.0/highland.png'
+        floor: "/images/seamless-64px-rpg-tiles-1.1.0/grass dry.png",
+        wall: "/images/seamless-64px-rpg-tiles-1.1.0/highland.png",
     },
     {
-        floor: '/images/seamless-64px-rpg-tiles-1.1.0/path2 snowy.png',
-        wall: '/images/seamless-64px-rpg-tiles-1.1.0/pebbles snow.png'
+        floor: "/images/seamless-64px-rpg-tiles-1.1.0/path2 snowy.png",
+        wall: "/images/seamless-64px-rpg-tiles-1.1.0/pebbles snow.png",
     },
 ];
 
@@ -84,18 +84,19 @@ const floorWallTileCombinations = [
         "exit_tile",
     ];
 
-    const floorWallTiles = floorWallTileCombinations[Math.floor(Math.random() * floorWallTileCombinations.length)]
+    const floorWallTiles =
+        floorWallTileCombinations[
+            Math.floor(Math.random() * floorWallTileCombinations.length)
+        ];
 
     PIXI.Assets.add([
         {
             alias: "floor_tile",
-            src:
-                baseURL + floorWallTiles.floor,
+            src: baseURL + floorWallTiles.floor,
         },
         {
             alias: "wall_tile",
-            src:
-                baseURL + floorWallTiles.wall
+            src: baseURL + floorWallTiles.wall,
         },
         {
             alias: "chest_tile",
@@ -193,6 +194,36 @@ const floorWallTileCombinations = [
     chestStatisticsContainer.x = 50;
     chestStatisticsContainer.y = 50;
     app.stage.addChild(chestStatisticsContainer);
+
+    // create chest navigators
+    interactiveObjects.forEach((obj) => {
+        if (obj.tileID == 2) {
+            // create a chest Navigator
+            const {
+                navigatorContainer: chestNavigatorContainer,
+                navigatorTicker: chestNavigatorTicker,
+            } = createNavigator({
+                text: "CHEST",
+                pointTo: obj.sprite,
+                style: {
+                    fill: 0xffee30,
+                    fontSize: 24,
+                    stroke: "black",
+                    strokeThickness: 4,
+                },
+                character: anim,
+                levelContainer,
+            });
+
+            obj.navigator = {
+                container: chestNavigatorContainer,
+                ticker: chestNavigatorTicker
+            }
+
+            app.stage.addChild(chestNavigatorContainer);
+            app.ticker.add(chestNavigatorTicker);
+        }
+    });
 
     // create character camera bounds
     characterCameraBounds.tl.x = app.screen.width / 4;
@@ -383,66 +414,26 @@ const floorWallTileCombinations = [
                 },
             };
             interactiveObjects.push(exitIntObj);
-            // create exit navigator UI
-            const exitNavigatorContainer = new PIXI.Container();
-            const exitNavigatorDirection = new PIXI.Text({
-                text: ">",
+
+            // create exit Navigator UI
+
+            const {
+                navigatorContainer: exitNavigatorContainer,
+                navigatorTicker: exitNavigatorTicker,
+            } = createNavigator({
+                text: "EXIT",
+                pointTo: exitTileSprite,
                 style: {
                     fill: 0xf04848,
                     fontSize: 24,
                     stroke: "black",
                     strokeThickness: 4,
                 },
+                character: anim,
+                levelContainer,
             });
-            exitNavigatorDirection.anchor.set(0.5, 0.5)
-            const exitNavigatorText = new PIXI.Text({
-                text: "EXIT",
-                style: {
-                    fill: 0xf04848,
-                    fontSize: 18,
-                    stroke: "black",
-                    strokeThickness: 4,
-                },
-            });
-            exitNavigatorContainer.addChild(exitNavigatorDirection);
-            exitNavigatorText.x =
-                exitNavigatorDirection.width / 2 - exitNavigatorText.width / 2;
-            exitNavigatorText.y = exitNavigatorDirection.y + 25;
-            exitNavigatorContainer.addChild(exitNavigatorText);
-            exitNavigatorContainer.x = app.screen.width / 2;
-            exitNavigatorContainer.y = 20;
+
             app.stage.addChild(exitNavigatorContainer);
-            // create exit navigator ticker
-            const screenBounds = {
-                tl: { x: 64, y: 64 },
-                br: { x: app.screen.width - 64, y: app.screen.height - 64 },
-            };
-            const exitNavigatorTicker = () => {
-                // if exit is on screen, hide exit navigator
-                if (
-                    isWithinBounds({
-                        x: exitTileSprite.x + levelContainer.x,
-                        y: exitTileSprite.y + levelContainer.y,
-                        bounds: screenBounds,
-                    })
-                ) {
-                    exitNavigatorContainer.alpha = 0;
-                } else {
-                    exitNavigatorContainer.alpha = 1;
-                }
-                // update navigator position and direction orientation
-                const xStep = (exitTileSprite.x + levelContainer.x - anim.x) / 100
-                const yStep = (exitTileSprite.y + levelContainer.y - anim.y) / 100
-                let exitNavigatorPosX = anim.x, exitNavigatorPosY = anim.y
-                while (isWithinBounds({x: exitNavigatorPosX + xStep, y: exitNavigatorPosY + yStep, bounds:screenBounds})){
-                    exitNavigatorPosX += xStep
-                    exitNavigatorPosY += yStep
-                }
-                exitNavigatorContainer.x += (exitNavigatorPosX - exitNavigatorContainer.x) / 60 
-                exitNavigatorContainer.y += (exitNavigatorPosY - exitNavigatorContainer.y) / 60
-                const angle = Math.atan2(exitTileSprite.y + levelContainer.y - anim.y, exitTileSprite.x + levelContainer.x - anim.x)
-                exitNavigatorDirection.rotation = angle
-            };
 
             app.ticker.add(exitNavigatorTicker);
 
@@ -555,6 +546,8 @@ const showChestDialog = (chest, character, levelContainer) => {
         yesOptionHander: () => {
             chestsOpened += 1;
             levelContainer.removeChild(chest.sprite);
+            app.stage.removeChild(chest.navigator.container)
+            app.ticker.remove(chest.navigator.ticker)
             levelLayout[chest.levelLayoutPos.levelLayoutY][
                 chest.levelLayoutPos.levelLayoutX
             ] = 0;
@@ -713,4 +706,74 @@ const createDialog = ({
     };
 
     return { dialogContainer, dialogTicker };
+};
+
+const createNavigator = ({
+    text,
+    pointTo,
+    style,
+    character,
+    levelContainer,
+}) => {
+    // create navigator UI
+    const navigatorContainer = new PIXI.Container();
+    const navigatorDirection = new PIXI.Text({
+        text: ">",
+        style,
+    });
+    navigatorDirection.anchor.set(0.5, 0.5);
+    const navigatorText = new PIXI.Text({
+        text,
+        style,
+    });
+    navigatorContainer.addChild(navigatorDirection);
+    navigatorText.x = navigatorDirection.width / 2 - navigatorText.width / 2;
+    navigatorText.y = navigatorDirection.y + 25;
+    navigatorContainer.addChild(navigatorText);
+    navigatorContainer.x = app.screen.width / 2;
+    navigatorContainer.y = 20;
+
+    // create navigator ticker
+    const screenBounds = {
+        tl: { x: 64, y: 64 },
+        br: { x: app.screen.width - 64, y: app.screen.height - 64 },
+    };
+    const navigatorTicker = () => {
+        // if pointed object is on screen, hide exit navigator
+        if (
+            isWithinBounds({
+                x: pointTo.x + levelContainer.x,
+                y: pointTo.y + levelContainer.y,
+                bounds: screenBounds,
+            })
+        ) {
+            navigatorContainer.alpha = 0;
+        } else {
+            navigatorContainer.alpha = 1;
+        }
+        // update navigator position and direction orientation
+        const xStep = (pointTo.x + levelContainer.x - character.x) / 100;
+        const yStep = (pointTo.y + levelContainer.y - character.y) / 100;
+        let navigatorPosX = character.x,
+            navigatorPosY = character.y;
+        while (
+            isWithinBounds({
+                x: navigatorPosX + xStep,
+                y: navigatorPosY + yStep,
+                bounds: screenBounds,
+            })
+        ) {
+            navigatorPosX += xStep;
+            navigatorPosY += yStep;
+        }
+        navigatorContainer.x += (navigatorPosX - navigatorContainer.x) / 60;
+        navigatorContainer.y += (navigatorPosY - navigatorContainer.y) / 60;
+        const angle = Math.atan2(
+            pointTo.y + levelContainer.y - character.y,
+            pointTo.x + levelContainer.x - character.x
+        );
+        navigatorDirection.rotation = angle;
+    };
+
+    return { navigatorContainer, navigatorTicker };
 };
