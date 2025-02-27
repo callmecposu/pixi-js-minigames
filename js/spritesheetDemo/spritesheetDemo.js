@@ -363,6 +363,69 @@ let chestsOpened = 0;
                 },
             };
             interactiveObjects.push(exitIntObj);
+            // create exit navigator UI
+            const exitNavigatorContainer = new PIXI.Container();
+            const exitNavigatorDirection = new PIXI.Text({
+                text: ">",
+                style: {
+                    fill: 0xf04848,
+                    fontSize: 24,
+                    stroke: "black",
+                    strokeThickness: 4,
+                },
+            });
+            exitNavigatorDirection.anchor.set(0.5, 0.5)
+            const exitNavigatorText = new PIXI.Text({
+                text: "EXIT",
+                style: {
+                    fill: 0xf04848,
+                    fontSize: 18,
+                    stroke: "black",
+                    strokeThickness: 4,
+                },
+            });
+            exitNavigatorContainer.addChild(exitNavigatorDirection);
+            exitNavigatorText.x =
+                exitNavigatorDirection.width / 2 - exitNavigatorText.width / 2;
+            exitNavigatorText.y = exitNavigatorDirection.y + 25;
+            exitNavigatorContainer.addChild(exitNavigatorText);
+            exitNavigatorContainer.x = app.screen.width / 2;
+            exitNavigatorContainer.y = 20;
+            app.stage.addChild(exitNavigatorContainer);
+            // create exit navigator ticker
+            const screenBounds = {
+                tl: { x: 64, y: 64 },
+                br: { x: app.screen.width - 64, y: app.screen.height - 64 },
+            };
+            const exitNavigatorTicker = () => {
+                // if exit is on screen, hide exit navigator
+                if (
+                    isWithinBounds({
+                        x: exitTileSprite.x + levelContainer.x,
+                        y: exitTileSprite.y + levelContainer.y,
+                        bounds: screenBounds,
+                    })
+                ) {
+                    exitNavigatorContainer.alpha = 0;
+                } else {
+                    exitNavigatorContainer.alpha = 1;
+                }
+                // update navigator position and direction orientation
+                const xStep = (exitTileSprite.x + levelContainer.x - anim.x) / 100
+                const yStep = (exitTileSprite.y + levelContainer.y - anim.y) / 100
+                let exitNavigatorPosX = anim.x, exitNavigatorPosY = anim.y
+                while (isWithinBounds({x: exitNavigatorPosX + xStep, y: exitNavigatorPosY + yStep, bounds:screenBounds})){
+                    exitNavigatorPosX += xStep
+                    exitNavigatorPosY += yStep
+                }
+                exitNavigatorContainer.x += (exitNavigatorPosX - exitNavigatorContainer.x) / 60 
+                exitNavigatorContainer.y += (exitNavigatorPosY - exitNavigatorContainer.y) / 60
+                const angle = Math.atan2(exitTileSprite.y + levelContainer.y - anim.y, exitTileSprite.x + levelContainer.x - anim.x)
+                exitNavigatorDirection.rotation = angle
+            };
+
+            app.ticker.add(exitNavigatorTicker);
+
             app.ticker.remove(updateUIStatisticsTicker);
         }
     };
