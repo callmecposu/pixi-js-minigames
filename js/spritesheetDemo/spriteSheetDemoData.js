@@ -103,13 +103,19 @@ carveCorridors();
 
 // add chests to the level
 
-const chestsNum = 5
+const chestsNum = 5;
 
-for (let i = 0; i < chestsNum; i++){
-    let x, y
+for (let i = 0; i < chestsNum; i++) {
+    let x, y;
     do {
-        x =  1 + Math.floor(Math.random() * (levelWidth - 3))
-        y =  1 + Math.floor(Math.random() * (levelHeight - 3))
-    }while (levelLayout[y][x] != 0);
-    levelLayout[y][x] = 2
+        x = 1 + Math.floor(Math.random() * (levelWidth - 3));
+        y = 1 + Math.floor(Math.random() * (levelHeight - 3));
+    } while (
+        levelLayout[y][x] != 0 ||
+        (x >= centerX - 1 &&
+            x <= centerX + 1 &&
+            y >= centerY - 1 &&
+            y <= centerY + 1)
+    );
+    levelLayout[y][x] = 2;
 }

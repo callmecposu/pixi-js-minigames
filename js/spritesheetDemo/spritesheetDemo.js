@@ -15,6 +15,8 @@ let interactiveObjects = [];
 
 let isDialogActive = false;
 
+let chestsOpened = 0;
+
 (async () => {
     // init PIXI
     await app.init({ background: 0xffffff, resizeTo: window });
@@ -99,6 +101,7 @@ let isDialogActive = false;
                         levelLayoutY: i,
                     },
                     tileID: levelLayout[i][y],
+                    dialogCooldown: 0,
                 });
                 // place a floor tile in its place during this stage
                 const tile = new PIXI.Sprite(levelAssets[0]);
@@ -123,6 +126,28 @@ let isDialogActive = false;
         }
     });
 
+    // create UI elements
+
+    // create chestsStatistics
+    const chestStatisticsContainer = new PIXI.Container();
+    const chestStatisticsIcon = new PIXI.Sprite(levelAssets[2]);
+    chestStatisticsIcon.scale = 0.5;
+    const chestStatisticsText = new PIXI.Text({
+        text: "0 / 5",
+        style: {
+            fill: 0xffffff,
+            fontFamily: "Courier New",
+            fontSize: 18,
+            stroke: 'black',
+            strokeThickness: 4
+        },
+    });
+    chestStatisticsContainer.addChild(chestStatisticsIcon);
+    chestStatisticsContainer.addChild(chestStatisticsText);
+    chestStatisticsText.x = chestStatisticsIcon.width + 20;
+    chestStatisticsText.y =
+        chestStatisticsIcon.height / 2 - chestStatisticsText.height / 2;
+
     // mount level container
     levelContainer.x = app.screen.width / 2 - levelContainer.width / 2;
     levelContainer.y = app.screen.height / 2 - levelContainer.height / 2;
@@ -132,6 +157,11 @@ let isDialogActive = false;
     anim.x = app.screen.width / 2 - anim.width / 2;
     anim.y = app.screen.height / 2 - anim.height / 2;
     app.stage.addChild(anim);
+
+    // mount UI elements
+    chestStatisticsContainer.x = 50;
+    chestStatisticsContainer.y = 50;
+    app.stage.addChild(chestStatisticsContainer);
 
     // create character camera bounds
     characterCameraBounds.tl.x = app.screen.width / 4;
@@ -265,9 +295,24 @@ let isDialogActive = false;
                 isInVicinity({ obj1: coord, obj2: obj.levelLayoutPos })
             )
         );
-        if (intObj && !isDialogActive) {
+        if (intObj && !isDialogActive && intObj.dialogCooldown == 0) {
             intObj.showDialog();
         }
+    });
+
+    // add ticker to reduce intercativeObjects' dialog cooldowns
+    app.ticker.add(() => {
+        interactiveObjects.forEach((obj) => {
+            if (obj.dialogCooldown > 0) {
+                obj.dialogCooldown -= 1;
+            }
+        });
+    });
+
+    // add ticker to update UI elements
+    app.ticker.add(() => {
+        // update chestStatistics
+        chestStatisticsText.text = `${chestsOpened} / ${chestsNum}`;
     });
 })();
 
@@ -367,55 +412,150 @@ const isInVicinity = ({ obj1, obj2 }) => {
 
 const showChestDialog = (chest, character, levelContainer) => {
     isDialogActive = true;
-    // create dialog
-    const dialogContainer = new PIXI.Container();
-    const dialogText = new PIXI.Text({
+
+    const { dialogContainer, dialogTicker } = createDialog({
         text: "You've found a chest!",
+        prompt: "Open it?",
+        yesOptionHander: () => {
+            chestsOpened += 1;
+            levelContainer.removeChild(chest.sprite);
+            levelLayout[chest.levelLayoutPos.levelLayoutY][
+                chest.levelLayoutPos.levelLayoutX
+            ] = 0;
+            interactiveObjects.splice(
+                interactiveObjects.findIndex((x) => x == chest),
+                1
+            );
+        },
+        noOptionHandler: () => {},
+        intObj: chest,
+        character,
+        levelContainer,
+    });
+
+    app.stage.addChild(dialogContainer);
+    app.ticker.add(dialogTicker);
+};
+
+const createDialog = ({
+    text,
+    prompt,
+    yesOptionHander,
+    noOptionHandler,
+    intObj,
+    character,
+    levelContainer,
+}) => {
+    // create dialog
+
+    // create dialog container
+    const dialogContainer = new PIXI.Container();
+    // create dialog text
+    const dialogText = new PIXI.Text({
+        text: text + "\n\n\n" + prompt,
         style: {
             fill: 0xffffff,
             fontSize: 24,
             fontFamily: "Courier New",
+            align: "center",
         },
     });
+    // create dialog bg
     const dialogBg = new PIXI.Graphics();
-    dialogBg.rect(0, 0, dialogText.width + 50, 150);
+    dialogBg.rect(0, 0, dialogText.width + 50, 250);
     dialogBg.fill(0x000000);
+    // create dialog options
+    let dialogOptionChosen = false;
+    const dialogOptionYes = new PIXI.Text({
+        text: "Yes",
+        style: {
+            fill: 0x4cf041,
+            fontSize: 24,
+            fontFamily: "Courier New",
+        },
+    });
+    dialogOptionYes.interactive = true;
+    dialogOptionYes.cursor = "pointer";
+    dialogOptionYes.on("pointerdown", () => {
+        dialogOptionChosen = true;
+        yesOptionHander();
+    });
+    const dialogOptionNo = new PIXI.Text({
+        text: "No",
+        style: {
+            fill: 0xf04848,
+            fontSize: 24,
+            fontFamily: "Courier New",
+        },
+    });
+    dialogOptionNo.interactive = true;
+    dialogOptionNo.cursor = "pointer";
+    dialogOptionNo.on("pointerdown", () => {
+        dialogOptionChosen = true;
+        intObj.dialogCooldown = 300;
+        noOptionHandler();
+    });
+    // mount dialod components to dialog container
     dialogContainer.addChild(dialogBg);
     dialogContainer.addChild(dialogText);
     dialogText.x = dialogContainer.width / 2 - dialogText.width / 2;
-    dialogText.y = dialogContainer.height / 2 - dialogText.height / 2;
+    dialogText.y = 50;
+    dialogContainer.addChild(dialogOptionYes);
+    dialogOptionYes.x = dialogContainer.width / 4 - dialogOptionYes.width / 2;
+    dialogOptionYes.y = 200;
+    dialogContainer.addChild(dialogOptionNo);
+    dialogOptionNo.x =
+        (dialogContainer.width / 4) * 3 - dialogOptionNo.width / 2;
+    dialogOptionNo.y = 200;
     dialogContainer.x = app.screen.width / 2 - dialogContainer.width / 2;
     dialogContainer.y = app.screen.height;
-    app.stage.addChild(dialogContainer);
-    // add ticker to remove dialog once player is not in vicinity
+
+    // create dialogTicker
     const dialogTicker = () => {
-        const curCharacterLevelLayoutPos = getLevelLayoutCoordinates({
-            x: character.x,
-            y: character.y,
-            levelContainer,
-        });
-        const characterInVicinity = [
-            curCharacterLevelLayoutPos[0],
-            curCharacterLevelLayoutPos[3],
-        ].every((coord) =>
-            isInVicinity({ obj1: coord, obj2: chest.levelLayoutPos })
-        );
-        if (characterInVicinity) {
-            if (
-                dialogContainer.y >
-                app.screen.height / 2 - dialogContainer.height / 2
-            ) {
-                dialogContainer.y -= 10;
+        if (!dialogOptionChosen) {
+            // get character's levelLayout coordinates
+            const curCharacterLevelLayoutPos = getLevelLayoutCoordinates({
+                x: character.x,
+                y: character.y,
+                levelContainer,
+            });
+            // see if character is in vicinity of the interactive object
+            const characterInVicinity = [
+                curCharacterLevelLayoutPos[0],
+                curCharacterLevelLayoutPos[3],
+            ].every((coord) =>
+                isInVicinity({ obj1: coord, obj2: intObj.levelLayoutPos })
+            );
+            // if character is in vicinity, animate dialog intro
+            if (characterInVicinity) {
+                if (
+                    dialogContainer.y >
+                    app.screen.height / 2 - dialogContainer.height / 2
+                ) {
+                    dialogContainer.y -= 10;
+                }
+            } else {
+                // if character is not in vicinity, animate dialog outro
+                if (dialogContainer.y < app.screen.height) {
+                    dialogContainer.y += 10;
+                } else {
+                    // when dialog is out of stage bounds, remove the dialog and its ticker
+                    isDialogActive = false;
+                    app.stage.removeChild(dialogContainer);
+                    app.ticker.remove(dialogTicker);
+                }
             }
         } else {
             if (dialogContainer.y < app.screen.height) {
                 dialogContainer.y += 10;
             } else {
+                // when dialog is out of stage bounds, remove the dialog and its ticker
                 isDialogActive = false;
                 app.stage.removeChild(dialogContainer);
                 app.ticker.remove(dialogTicker);
             }
         }
     };
-    app.ticker.add(dialogTicker);
+
+    return { dialogContainer, dialogTicker };
 };
